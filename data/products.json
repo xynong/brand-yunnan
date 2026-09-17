@@ -1,0 +1,114 @@
+[
+  {
+    "id": "coffee",
+    "name": "Yunnan Specialty Coffee",
+    "cn": "云南精品咖啡",
+    "price": 22,
+    "size": "250g whole beans",
+    "category": "Coffee",
+    "accent": "coffee",
+    "tagline": "A distinctive coffee from the mountains of Yunnan, China.",
+    "details": [
+      [
+        "Origin",
+        "Yunnan, China"
+      ],
+      [
+        "Format",
+        "Whole beans"
+      ],
+      [
+        "Pack size",
+        "250g"
+      ],
+      [
+        "Profile",
+        "Chocolate · Citrus · Caramel"
+      ]
+    ]
+  },
+  {
+    "id": "tea",
+    "name": "Yunnan Premium Tea",
+    "cn": "云南精品茶",
+    "price": 26,
+    "size": "50–100g",
+    "category": "Tea",
+    "accent": "tea",
+    "tagline": "Mountain, leaf, time — a modern expression of Yunnan tea.",
+    "details": [
+      [
+        "Origin",
+        "Yunnan, China"
+      ],
+      [
+        "Format",
+        "Loose leaf"
+      ],
+      [
+        "Pack size",
+        "50–100g"
+      ],
+      [
+        "Profile",
+        "Floral · Honey · Earthy"
+      ]
+    ]
+  },
+  {
+    "id": "truffle",
+    "name": "Yunnan Truffle",
+    "cn": "云南松露",
+    "price": 49,
+    "size": "50g seasonal pack",
+    "category": "Truffle",
+    "accent": "truffle",
+    "tagline": "A seasonal taste of the wild, from Yunnan.",
+    "details": [
+      [
+        "Origin",
+        "Yunnan, China"
+      ],
+      [
+        "Format",
+        "Seasonal product"
+      ],
+      [
+        "Pack size",
+        "50g"
+      ],
+      [
+        "Availability",
+        "Limited seasonal release"
+      ]
+    ]
+  },
+  {
+    "id": "oil",
+    "name": "Yunnan Botanical Essential Oil",
+    "cn": "云南植物精油",
+    "price": 22,
+    "size": "10ml",
+    "category": "Essential Oil",
+    "accent": "oil",
+    "tagline": "The scent of Yunnan — botanical, simple, modern.",
+    "details": [
+      [
+        "Origin",
+        "Yunnan, China"
+      ],
+      [
+        "Format",
+        "Essential oil"
+      ],
+      [
+        "Pack size",
+        "10ml"
+      ],
+      [
+        "Positioning",
+        "Lifestyle & botanical aroma"
+      ]
+    ]
+  }
+]
