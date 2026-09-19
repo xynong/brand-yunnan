@@ -7,24 +7,12 @@
     "size": "250g whole beans",
     "category": "Coffee",
     "accent": "coffee",
-    "tagline": "A distinctive coffee from the mountains of Yunnan, China.",
+    "tagline": "From mountain to cup, without compromise.",
     "details": [
-      [
-        "Origin",
-        "Yunnan, China"
-      ],
-      [
-        "Format",
-        "Whole beans"
-      ],
-      [
-        "Pack size",
-        "250g"
-      ],
-      [
-        "Profile",
-        "Chocolate · Citrus · Caramel"
-      ]
+      ["Origin", "Yunman Estate, Lushui, Nujiang, Yunnan (1,500m)"],
+      ["Variety", "Typica"],
+      ["Process", "Washed"],
+      ["Cup Score", "89 pts"]
     ]
   },
   {
@@ -37,22 +25,10 @@
     "accent": "tea",
     "tagline": "Mountain, leaf, time — a modern expression of Yunnan tea.",
     "details": [
-      [
-        "Origin",
-        "Yunnan, China"
-      ],
-      [
-        "Format",
-        "Loose leaf"
-      ],
-      [
-        "Pack size",
-        "50–100g"
-      ],
-      [
-        "Profile",
-        "Floral · Honey · Earthy"
-      ]
+      ["Origin", "Yunnan, China"],
+      ["Format", "Loose leaf"],
+      ["Pack size", "50–100g"],
+      ["Profile", "Floral · Honey · Earthy"]
     ]
   },
   {
@@ -65,22 +41,10 @@
     "accent": "truffle",
     "tagline": "A seasonal taste of the wild, from Yunnan.",
     "details": [
-      [
-        "Origin",
-        "Yunnan, China"
-      ],
-      [
-        "Format",
-        "Seasonal product"
-      ],
-      [
-        "Pack size",
-        "50g"
-      ],
-      [
-        "Availability",
-        "Limited seasonal release"
-      ]
+      ["Origin", "Yunnan, China"],
+      ["Format", "Seasonal product"],
+      ["Pack size", "50g"],
+      ["Availability", "Limited seasonal release"]
     ]
   },
   {
@@ -93,22 +57,10 @@
     "accent": "oil",
     "tagline": "The scent of Yunnan — botanical, simple, modern.",
     "details": [
-      [
-        "Origin",
-        "Yunnan, China"
-      ],
-      [
-        "Format",
-        "Essential oil"
-      ],
-      [
-        "Pack size",
-        "10ml"
-      ],
-      [
-        "Positioning",
-        "Lifestyle & botanical aroma"
-      ]
+      ["Origin", "Yunnan, China"],
+      ["Format", "Essential oil"],
+      ["Pack size", "10ml"],
+      ["Positioning", "Lifestyle & botanical aroma"]
     ]
   }
 ]
