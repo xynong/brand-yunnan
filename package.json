@@ -1,0 +1,12 @@
+{
+  "name": "xyong-commerce-os",
+  "private": true,
+  "version": "2.0.0",
+  "scripts": {
+    "build:store": "npm --prefix apps/storefront run build",
+    "build:ops": "npm --prefix apps/ops run build",
+    "build": "npm run build:store && npm run build:ops",
+    "dev:store": "npm --prefix apps/storefront run dev",
+    "dev:ops": "npm --prefix apps/ops run dev"
+  }
+}

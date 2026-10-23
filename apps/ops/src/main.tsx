@@ -1,0 +1,20 @@
+import React,{useEffect,useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import './style.css';
+const API=import.meta.env.VITE_API_BASE_URL||'http://localhost:8787';
+function App(){
+ const[token,setToken]=useState(localStorage.getItem('xyong_ops_token')||''); const[d,setD]=useState<any>(null); const[g,setG]=useState<any>(null); const[error,setError]=useState('');
+ const headers=()=>({Authorization:`Bearer ${token}`,'Content-Type':'application/json'});
+ const load=async()=>{try{const [a,b]=await Promise.all([fetch(`${API}/api/ops/dashboard`,{headers:headers()}),fetch(`${API}/api/ops/growth/overview`,{headers:headers()})]); const x=await a.json(),y=await b.json(); if(!a.ok) throw new Error(x.error||'Unauthorized'); setD(x);setG(y);setError('')}catch(e:any){setError(e.message)}};
+ useEffect(()=>{if(token)load()},[token]);
+ const runAgent=async()=>{await fetch(`${API}/api/ops/agent/run`,{method:'POST',headers:headers()});await load()};
+ const updateTask=async(id:string,status:string)=>{await fetch(`${API}/api/ops/agent/tasks/${id}`,{method:'PUT',headers:headers(),body:JSON.stringify({status})});await load()};
+ if(!token||error==='Unauthorized')return <main className="login"><div className="box"><div className="eyebrow">XYONG PRIVATE</div><h1>Operations Center</h1><p>生产环境请同时在 Cloudflare Access 中保护 ops 子域。本页面的 API Token 只是第二层应用授权。</p><input type="password" placeholder="Admin API token" value={token} onChange={e=>setToken(e.target.value)}/><button onClick={()=>{localStorage.setItem('xyong_ops_token',token);load()}}>进入运营中心</button>{error&&<small>{error}</small>}</div></main>;
+ return <main><header><div><b>XYONG</b><span> Commerce & Growth OS</span></div><div><button onClick={load}>刷新</button><button onClick={()=>{localStorage.removeItem('xyong_ops_token');setToken('');setD(null)}}>退出</button></div></header>
+ <section className="hero"><div><div className="eyebrow">ONE PERSON COMPANY</div><h1>Today’s control room</h1><p>你负责判断与批准；系统负责沉淀数据、发现异常、生成增长任务。</p></div></section>
+ <section className="cards"><div><span>Active products</span><strong>{d?.products?.count??'—'}</strong></div><div><span>Inventory units</span><strong>{d?.inventory?.units??'—'}</strong></div><div><span>Leads</span><strong>{d?.leads?.total??'—'}</strong></div><div><span>Open AI tasks</span><strong>{d?.tasks?.open_count??'—'}</strong></div></section>
+ <section className="panel"><div className="panel-head"><h2>Growth Center / 获客中心</h2><button onClick={runAgent}>运行 AI Agent</button></div><div className="grid2"><div><h3>获客来源</h3><table><tbody>{(d?.acquisition||[]).map((x:any)=><tr key={x.source}><td>{x.source}</td><td>{x.events} events</td><td>{x.purchases} purchases</td></tr>)}</tbody></table></div><div><h3>Leads</h3><div className="metricline">{(g?.leads||[]).map((x:any)=><span key={x.stage}>{x.stage}: <b>{x.count}</b></span>)}</div><h3>Campaigns</h3><p>{g?.campaigns?.length||0} campaigns in the system.</p></div></div></section>
+ <section className="panel"><div className="panel-head"><h2>AI Agent 工作区</h2><span className="muted">AI 只建议；资金、退款、支付确认和发布需要你批准。</span></div><div className="tasks">{(g?.tasks||[]).map((t:any)=><article className={t.priority==='high'?'task high':'task'} key={t.id}><div><b>{t.agent_name}</b><span>{t.priority}</span></div><h3>{t.title}</h3><p>{t.recommendation}</p><div><button onClick={()=>updateTask(t.id,'approved')}>批准</button><button onClick={()=>updateTask(t.id,'completed')}>完成</button><button onClick={()=>updateTask(t.id,'rejected')}>拒绝</button></div></article>)}{!(g?.tasks||[]).length&&<p>暂无任务。点击“运行 AI Agent”生成今日建议。</p>}</div></section>
+ <section className="panel"><h2>运营闭环</h2><div className="road"><span>Social / Community / Search</span><b>→</b><span>Lead</span><b>→</b><span>Campaign</span><b>→</b><span>Store</span><b>→</b><span>Order</span><b>→</b><span>Repeat</span></div><p>每个渠道使用 UTM 与 acquisition_events 记录来源；客户提交邮箱后进入 Leads；购买后可以进入 Customers。后续接入真实社媒 API 时，不改变核心数据模型。</p></section>
+ </main>}
+createRoot(document.getElementById('root')!).render(<App/>);

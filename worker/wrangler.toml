@@ -1,0 +1,23 @@
+name = "xyong-commerce-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-22"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "xyong-db"
+database_id = "REPLACE_WITH_YOUR_FULL_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "xyong-media"
+
+[vars]
+STORE_ORIGIN = "https://xyong.ccwu.cc"
+OPS_ORIGIN = "https://ops.xyong.ccwu.cc"
+
+[triggers]
+# Cloudflare Cron uses UTC. 02:00 UTC = 09:00 Bangkok time.
+crons = ["0 2 * * *"]
+
+[observability]
+enabled = true
