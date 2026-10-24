@@ -5,7 +5,7 @@ compatibility_date = "2026-10-22"
 [[d1_databases]]
 binding = "DB"
 database_name = "xyong-db"
-database_id = "REPLACE_WITH_YOUR_FULL_D1_DATABASE_ID"
+database_id = "f37c0ebe-4e04-46e1-a357-33719228fd11"
 
 [[r2_buckets]]
 binding = "ASSETS"
