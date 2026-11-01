@@ -105,5 +105,3 @@ if (url.pathname === '/api/store/products' && request.method === 'GET') {
     }
 
     return json({error:'Not found'},404,origin);
-  }
-};
