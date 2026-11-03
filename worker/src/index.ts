@@ -1,4 +1,140 @@
-if (url.pathname === '/api/store/products' && request.method === 'GET') {
+// xyong-commerce-api  —  worker/src/index.ts
+// 说明：第 “路由部分” 的代码是你原来的；文件开头（辅助函数）和结尾（收尾括号）是补上的。
+
+export interface Env {
+  DB: D1Database;        // D1 数据库绑定，名称必须是 DB
+  ASSETS: R2Bucket;      // R2 存储桶绑定，名称必须是 ASSETS
+  OPS_TOKEN?: string;    // 后台口令（用 wrangler secret put OPS_TOKEN 设置）
+}
+
+/* ---------- 辅助函数 ---------- */
+
+function corsHeaders(origin: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Ops-Token',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
+  };
+}
+
+function json(data: unknown, status = 200, origin = ''): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      ...corsHeaders(origin),
+    },
+  });
+}
+
+async function body(request: Request): Promise<any> {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+
+function authorized(request: Request, env: Env): boolean {
+  const expected = env.OPS_TOKEN;
+  if (!expected) return false; // 没设置口令时，一律拒绝后台请求
+  const header = request.headers.get('Authorization') || '';
+  const token = header.startsWith('Bearer ')
+    ? header.slice(7).trim()
+    : (request.headers.get('X-Ops-Token') || '').trim();
+  if (!token || token.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
+// 增长助手：按简单规则生成待办任务，已存在的同名未完成任务不会重复创建
+async function runGrowthAgent(env: Env): Promise<string[]> {
+  const created: string[] = [];
+
+  async function addTask(
+    taskType: string,
+    priority: 'high' | 'normal' | 'low',
+    title: string,
+    recommendation: string,
+    requiresApproval: boolean
+  ) {
+    const exists = await env.DB.prepare(
+      `SELECT id FROM agent_tasks WHERE status='open' AND task_type=? AND title=? LIMIT 1`
+    ).bind(taskType, title).first<any>();
+    if (exists) return;
+    const id = crypto.randomUUID();
+    await env.DB.prepare(
+      `INSERT INTO agent_tasks (id,agent_name,task_type,priority,status,title,recommendation,requires_approval) VALUES (?,?,?,?,?,?,?,?)`
+    ).bind(id, 'growth_agent', taskType, priority, 'open', title, recommendation, requiresApproval ? 1 : 0).run();
+    created.push(id);
+  }
+
+  const newLeads = await env.DB.prepare(`SELECT COUNT(*) AS n FROM leads WHERE stage='new'`).first<any>();
+  if (Number(newLeads?.n || 0) > 0) {
+    await addTask('lead_followup', 'high', `跟进 ${newLeads.n} 条新线索`,
+      '尽快给新线索发送欢迎邮件或消息，并根据兴趣品类推荐商品。', true);
+  }
+
+  const lowStock = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM products p LEFT JOIN inventory i ON i.product_id=p.id WHERE p.status='active' AND COALESCE(i.available_qty,0)<=5`
+  ).first<any>();
+  if (Number(lowStock?.n || 0) > 0) {
+    await addTask('restock', 'high', `${lowStock.n} 个在售商品库存不足（≤5）`,
+      '检查库存并安排补货，或暂时下架缺货商品。', true);
+  }
+
+  const pending = await env.DB.prepare(`SELECT COUNT(*) AS n FROM orders WHERE status='pending_payment'`).first<any>();
+  if (Number(pending?.n || 0) > 0) {
+    await addTask('order_followup', 'normal', `${pending.n} 个订单待付款`,
+      '向未付款客户发送付款提醒，或确认订单是否需要取消。', true);
+  }
+
+  const active = await env.DB.prepare(`SELECT COUNT(*) AS n FROM campaigns WHERE status='active'`).first<any>();
+  if (Number(active?.n || 0) === 0) {
+    await addTask('campaign_create', 'normal', '当前没有进行中的营销活动',
+      '创建一个新的营销活动，设置好 UTM 参数和落地页。', true);
+  }
+
+  return created;
+}
+
+/* ---------- 入口 ---------- */
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    const origin = request.headers.get('Origin') || '';
+
+    // 浏览器跨域预检
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders(origin) });
+    }
+
+    try {
+      // 健康检查
+      if (url.pathname === '/' || url.pathname === '/api/health') {
+        return json({ ok: true, service: 'xyong-commerce-api' }, 200, origin);
+      }
+
+      // 图片/素材读取（后台通过 /api/ops/assets/ 上传到 R2）
+      if (url.pathname.startsWith('/media/') && (request.method === 'GET' || request.method === 'HEAD')) {
+        const key = decodeURIComponent(url.pathname.slice('/media/'.length));
+        if (!key || key.includes('..')) return json({ error: 'Invalid asset key' }, 400, origin);
+        const obj = await env.ASSETS.get(key);
+        if (!obj) return json({ error: 'Not found' }, 404, origin);
+        const headers = new Headers(corsHeaders(origin));
+        headers.set('Content-Type', obj.httpMetadata?.contentType || 'application/octet-stream');
+        headers.set('Cache-Control', 'public, max-age=3600');
+        return new Response(request.method === 'HEAD' ? null : obj.body, { status: 200, headers });
+      }
+
+      /* ---------- 路由部分（你原来的代码） ---------- */
+
+    if (url.pathname === '/api/store/products' && request.method === 'GET') {
       const { results } = await env.DB.prepare(`SELECT p.*, b.name AS brand_name, b.name_en AS brand_name_en, COALESCE(i.available_qty,0) AS available_qty FROM products p JOIN brands b ON b.id=p.brand_id LEFT JOIN inventory i ON i.product_id=p.id WHERE p.status='active' ORDER BY p.category, p.created_at DESC`).all();
       return json({ products: results }, 200, origin);
     }
@@ -105,3 +241,11 @@ if (url.pathname === '/api/store/products' && request.method === 'GET') {
     }
 
     return json({error:'Not found'},404,origin);
+
+    /* ---------- 路由部分结束 ---------- */
+    } catch (err) {
+      console.error('Unhandled error:', err);
+      return json({ error: 'Internal server error' }, 500, origin);
+    }
+  },
+};
