@@ -5,13 +5,19 @@ export interface Env {
   DB: D1Database;        // D1 数据库绑定，名称必须是 DB
   ASSETS: R2Bucket;      // R2 存储桶绑定，名称必须是 ASSETS
   OPS_TOKEN?: string;    // 后台口令（用 wrangler secret put OPS_TOKEN 设置）
+  OPS_ORIGIN?: string;   // 后台网站地址，例如 https://ops.xyong.ccwu.cc
+  STORE_ORIGIN?: string; // 商城网站地址，例如 https://xyong.ccwu.cc
 }
+
+// 允许跨域访问的网站（每次请求开始时由 OPS_ORIGIN / STORE_ORIGIN 填入）
+let ALLOWED_ORIGINS: string[] = [];
 
 /* ---------- 辅助函数 ---------- */
 
 function corsHeaders(origin: string): Record<string, string> {
   return {
-    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Origin':
+      ALLOWED_ORIGINS.length === 0 ? (origin || '*') : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Ops-Token',
     'Access-Control-Max-Age': '86400',
@@ -108,6 +114,7 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
+    ALLOWED_ORIGINS = [env.OPS_ORIGIN, env.STORE_ORIGIN].filter(Boolean) as string[];
 
     // 浏览器跨域预检
     if (request.method === 'OPTIONS') {
@@ -245,7 +252,8 @@ export default {
     /* ---------- 路由部分结束 ---------- */
     } catch (err) {
       console.error('Unhandled error:', err);
-      return json({ error: 'Internal server error' }, 500, origin);
+      // 临时调试：返回具体错误原因，问题解决后可以删掉 detail 这一项
+      return json({ error: 'Internal server error', detail: String((err as any)?.message || err) }, 500, origin);
     }
   },
 };
