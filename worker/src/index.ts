@@ -1,145 +1,98 @@
-// xyong-commerce-api  —  worker/src/index.ts
-// 说明：第 “路由部分” 的代码是你原来的；文件开头（辅助函数）和结尾（收尾括号）是补上的。
-
 export interface Env {
-  DB: D1Database;        // D1 数据库绑定，名称必须是 DB
-  ASSETS: R2Bucket;      // R2 存储桶绑定，名称必须是 ASSETS
-  OPS_TOKEN?: string;    // 后台口令（用 wrangler secret put OPS_TOKEN 设置）
-  OPS_ORIGIN?: string;   // 后台网站地址，例如 https://ops.xyong.ccwu.cc
-  STORE_ORIGIN?: string; // 商城网站地址，例如 https://xyong.ccwu.cc
+  DB: D1Database;
+  ASSETS: R2Bucket;
+  ADMIN_TOKEN: string;
+  STORE_ORIGIN: string;
+  OPS_ORIGIN: string;
 }
 
-// 允许跨域访问的网站（每次请求开始时由 OPS_ORIGIN / STORE_ORIGIN 填入）
-let ALLOWED_ORIGINS: string[] = [];
-
-/* ---------- 辅助函数 ---------- */
-
-function corsHeaders(origin: string): Record<string, string> {
-  return {
-    'Access-Control-Allow-Origin':
-      ALLOWED_ORIGINS.length === 0 ? (origin || '*') : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]),
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Ops-Token',
-    'Access-Control-Max-Age': '86400',
-    'Vary': 'Origin',
-  };
-}
-
-function json(data: unknown, status = 200, origin = ''): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      ...corsHeaders(origin),
-    },
-  });
-}
-
-async function body(request: Request): Promise<any> {
-  try {
-    return await request.json();
-  } catch {
-    return {};
+const json = (data: unknown, status = 200, origin = '*') => new Response(JSON.stringify(data), {
+  status,
+  headers: {
+    'content-type': 'application/json; charset=utf-8',
+    'access-control-allow-origin': origin,
+    'access-control-allow-headers': 'Content-Type, Authorization',
+    'access-control-allow-methods': 'GET,POST,PUT,OPTIONS'
   }
+});
+
+function corsOrigin(request: Request, env: Env) {
+  const origin = request.headers.get('Origin');
+  return origin === env.STORE_ORIGIN || origin === env.OPS_ORIGIN ? origin : env.STORE_ORIGIN;
 }
 
-function authorized(request: Request, env: Env): boolean {
-  const expected = env.OPS_TOKEN;
-  if (!expected) return false; // 没设置口令时，一律拒绝后台请求
+function authorized(request: Request, env: Env) {
   const header = request.headers.get('Authorization') || '';
-  const token = header.startsWith('Bearer ')
-    ? header.slice(7).trim()
-    : (request.headers.get('X-Ops-Token') || '').trim();
-  if (!token || token.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
-  return diff === 0;
+  return !!env.ADMIN_TOKEN && header === `Bearer ${env.ADMIN_TOKEN}`;
 }
 
-// 增长助手：按简单规则生成待办任务，已存在的同名未完成任务不会重复创建
-async function runGrowthAgent(env: Env): Promise<string[]> {
-  const created: string[] = [];
+async function body(request: Request) { try { return await request.json<any>(); } catch { return null; } }
 
-  async function addTask(
-    taskType: string,
-    priority: 'high' | 'normal' | 'low',
-    title: string,
-    recommendation: string,
-    requiresApproval: boolean
-  ) {
-    const exists = await env.DB.prepare(
-      `SELECT id FROM agent_tasks WHERE status='open' AND task_type=? AND title=? LIMIT 1`
-    ).bind(taskType, title).first<any>();
-    if (exists) return;
-    const id = crypto.randomUUID();
-    await env.DB.prepare(
-      `INSERT INTO agent_tasks (id,agent_name,task_type,priority,status,title,recommendation,requires_approval) VALUES (?,?,?,?,?,?,?,?)`
-    ).bind(id, 'growth_agent', taskType, priority, 'open', title, recommendation, requiresApproval ? 1 : 0).run();
-    created.push(id);
-  }
-
-  const newLeads = await env.DB.prepare(`SELECT COUNT(*) AS n FROM leads WHERE stage='new'`).first<any>();
-  if (Number(newLeads?.n || 0) > 0) {
-    await addTask('lead_followup', 'high', `跟进 ${newLeads.n} 条新线索`,
-      '尽快给新线索发送欢迎邮件或消息，并根据兴趣品类推荐商品。', true);
-  }
-
-  const lowStock = await env.DB.prepare(
-    `SELECT COUNT(*) AS n FROM products p LEFT JOIN inventory i ON i.product_id=p.id WHERE p.status='active' AND COALESCE(i.available_qty,0)<=5`
-  ).first<any>();
-  if (Number(lowStock?.n || 0) > 0) {
-    await addTask('restock', 'high', `${lowStock.n} 个在售商品库存不足（≤5）`,
-      '检查库存并安排补货，或暂时下架缺货商品。', true);
-  }
-
-  const pending = await env.DB.prepare(`SELECT COUNT(*) AS n FROM orders WHERE status='pending_payment'`).first<any>();
-  if (Number(pending?.n || 0) > 0) {
-    await addTask('order_followup', 'normal', `${pending.n} 个订单待付款`,
-      '向未付款客户发送付款提醒，或确认订单是否需要取消。', true);
-  }
-
-  const active = await env.DB.prepare(`SELECT COUNT(*) AS n FROM campaigns WHERE status='active'`).first<any>();
-  if (Number(active?.n || 0) === 0) {
-    await addTask('campaign_create', 'normal', '当前没有进行中的营销活动',
-      '创建一个新的营销活动，设置好 UTM 参数和落地页。', true);
-  }
-
-  return created;
+async function createAgentTask(env: Env, agent_name: string, task_type: string, priority: string, title: string, recommendation: string, payload: unknown = {}) {
+  const id = crypto.randomUUID();
+  await env.DB.prepare(`INSERT INTO agent_tasks (id,agent_name,task_type,priority,title,recommendation,payload_json,requires_approval) VALUES (?,?,?,?,?,?,?,1)`)
+    .bind(id, agent_name, task_type, priority, title, recommendation, JSON.stringify(payload)).run();
+  return id;
 }
 
-/* ---------- 入口 ---------- */
+async function runGrowthAgent(env: Env) {
+  const inventory = await env.DB.prepare(`SELECT p.sku,p.name_en,p.category,i.available_qty FROM products p LEFT JOIN inventory i ON i.product_id=p.id WHERE p.status='active'`).all<any>();
+  const lowStock = (inventory.results || []).filter((x: any) => Number(x.available_qty || 0) <= 10);
+  const leads = await env.DB.prepare(`SELECT COUNT(*) AS count FROM leads WHERE stage IN ('new','warm')`).first<any>();
+  const tasks: string[] = [];
+  if (lowStock.length) tasks.push(await createAgentTask(env, 'Growth & Inventory Agent', 'inventory_alert', 'high', `${lowStock.length} 个 SKU 库存偏低`, '检查补货周期并生成采购草案；AI不得直接下采购单。', { items: lowStock }))
+  if (Number(leads?.count || 0) > 0) tasks.push(await createAgentTask(env, 'CRM Agent', 'lead_followup', 'normal', `跟进 ${leads.count} 个活跃潜客`, '根据来源、兴趣品类和最近行为生成个性化英文跟进草稿，发送前由你批准。', {}));
+  tasks.push(await createAgentTask(env, 'Content Agent', 'content_batch', 'normal', '生成本周四大品类内容草案', '为 Coffee / Ancient Tree Tea / Black Truffle / Botanical Essential Oil 各生成一组内容选题与文案草稿，不自动发布。', { categories: ['coffee','ancient_tree_tea','black_truffle','botanical_essential_oil'] }));
+  return tasks;
+}
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-    const origin = request.headers.get('Origin') || '';
-    ALLOWED_ORIGINS = [env.OPS_ORIGIN, env.STORE_ORIGIN].filter(Boolean) as string[];
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext) {
+    await runGrowthAgent(env);
+  },
 
-    // 浏览器跨域预检
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(origin) });
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const origin = corsOrigin(request, env);
+    if (request.method === 'OPTIONS') return new Response(null, { headers: { 'access-control-allow-origin': origin, 'access-control-allow-headers': 'Content-Type, Authorization', 'access-control-allow-methods': 'GET,POST,PUT,OPTIONS' } });
+    const url = new URL(request.url);
+
+    // Private R2-backed media gateway. Objects remain private in R2.
+    // Public product/evidence URLs are served through this Worker route.
+    if (url.pathname.startsWith('/media/')) {
+      const key = decodeURIComponent(url.pathname.slice('/media/'.length));
+      if (!key) return new Response('Not found', {status: 404});
+      const obj = await env.ASSETS.get(key);
+      if (!obj) return new Response('Not found', {status: 404});
+      const headers = new Headers();
+      obj.writeHttpMetadata(headers);
+      headers.set('etag', obj.httpEtag);
+      headers.set('cache-control', 'public, max-age=86400');
+      return new Response(obj.body, {headers});
     }
 
-    try {
-      // 健康检查
-      if (url.pathname === '/' || url.pathname === '/api/health') {
-        return json({ ok: true, service: 'xyong-commerce-api' }, 200, origin);
+    // V3 Phase 1: protected, read-only infrastructure inventory.
+    // Does not create, alter, migrate, or delete any production data.
+    if (url.pathname === '/api/ops/diagnostics' && request.method === 'GET') {
+      if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401, origin);
+      try {
+        const tableResult = await env.DB.prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`
+        ).all<{name: string}>();
+        const r2Result = await env.ASSETS.list({ limit: 1 });
+        return json({
+          ok: true,
+          version: '3.0.0-phase1',
+          mode: 'read_only',
+          checked_at: new Date().toISOString(),
+          d1: { connected: true, database: 'xyong-db', table_count: tableResult.results.length, tables: tableResult.results.map(row => row.name) },
+          r2: { connected: true, bucket: 'xyong-media', has_objects: r2Result.objects.length > 0, listing_truncated: r2Result.truncated }
+        }, 200, origin);
+      } catch (error) {
+        return json({ ok: false, mode: 'read_only', error: error instanceof Error ? error.message : 'Infrastructure check failed' }, 500, origin);
       }
+    }
 
-      // 图片/素材读取（后台通过 /api/ops/assets/ 上传到 R2）
-      if (url.pathname.startsWith('/media/') && (request.method === 'GET' || request.method === 'HEAD')) {
-        const key = decodeURIComponent(url.pathname.slice('/media/'.length));
-        if (!key || key.includes('..')) return json({ error: 'Invalid asset key' }, 400, origin);
-        const obj = await env.ASSETS.get(key);
-        if (!obj) return json({ error: 'Not found' }, 404, origin);
-        const headers = new Headers(corsHeaders(origin));
-        headers.set('Content-Type', obj.httpMetadata?.contentType || 'application/octet-stream');
-        headers.set('Cache-Control', 'public, max-age=3600');
-        return new Response(request.method === 'HEAD' ? null : obj.body, { status: 200, headers });
-      }
-
-      /* ---------- 路由部分（你原来的代码） ---------- */
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'xyong-commerce-api', version: '2.1.0' }, 200, origin);
 
     if (url.pathname === '/api/store/products' && request.method === 'GET') {
       const { results } = await env.DB.prepare(`SELECT p.*, b.name AS brand_name, b.name_en AS brand_name_en, COALESCE(i.available_qty,0) AS available_qty FROM products p JOIN brands b ON b.id=p.brand_id LEFT JOIN inventory i ON i.product_id=p.id WHERE p.status='active' ORDER BY p.category, p.created_at DESC`).all();
@@ -248,12 +201,5 @@ export default {
     }
 
     return json({error:'Not found'},404,origin);
-
-    /* ---------- 路由部分结束 ---------- */
-    } catch (err) {
-      console.error('Unhandled error:', err);
-      // 临时调试：返回具体错误原因，问题解决后可以删掉 detail 这一项
-      return json({ error: 'Internal server error', detail: String((err as any)?.message || err) }, 500, origin);
-    }
-  },
+  }
 };
