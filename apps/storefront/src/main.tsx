@@ -49,6 +49,18 @@ function optionalText(value: unknown): string | undefined {
   return text || undefined;
 }
 
+function imageSrc(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  // encodeURI escapes non-ASCII path characters while preserving URL syntax.
+  // Absolute R2/CDN URLs remain absolute and are never prefixed with the API URL.
+  const encoded = encodeURI(value);
+  if (/^https?:\/\//i.test(value)) return encoded;
+
+  // Resolve relative media paths against the Worker API origin.
+  return new URL(encoded, `${API}/`).toString();
+}
+
 function normalizeProduct(row: ProductRow): Product {
   const priceUsd = optionalNumber(row.price_usd);
   const priceCents = optionalNumber(row.price_cents);
@@ -246,8 +258,8 @@ function App() {
             {products.map(product => (
               <article className="card" key={product.sku}>
                 <div className="image">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={productName(product)} />
+                  {imageSrc(product.image_url) ? (
+                    <img src={imageSrc(product.image_url)} alt={productName(product)} />
                   ) : (
                     <span>{product.category}</span>
                   )}
