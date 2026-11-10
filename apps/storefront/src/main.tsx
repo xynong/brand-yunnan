@@ -101,7 +101,7 @@ const messages = {
     itemTypes: '种商品',
     total: '合计',
     checkout: '前往安全结账',
-    checkoutNotice: '在线结账暂未开放。���需购买，请联系我们。',
+    checkoutNotice: '在线结账暂未开放。如需购买，请联系我们。',
     language: 'EN',
     currency: '美元',
     brandTagline: '云南精品园',
@@ -219,8 +219,8 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     document.title = lang === 'zh'
-      ? 'XYONG BRAND 云南精品园 | 跨境商城'
-      : 'XYONG BRAND | Yunnan Boutique Garden';
+      ? 'XYONG BRAND · 云南精品园 | 跨境商城'
+      : 'XYONG BRAND · Yunnan Boutique Garden';
     try {
       window.localStorage.setItem(LANGUAGE_KEY, lang);
     } catch {
