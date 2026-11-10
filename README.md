@@ -6,7 +6,7 @@
 
 - 客户商城：`https://xyong.ccwu.cc`
 - 私有运营中心：`https://ops.xyong.ccwu.cc`
-- Cloudflare Worker API：建议使用 `https://api.xyong.ccwu.cc`
+- Cloudflare Worker API：`https://apixyong.ccwu.cc`
 - Cloudflare D1：**xyong-db**（来自当前 Cloudflare 截图）
 - Cloudflare R2：**xyong-media**（来自当前 Cloudflare 截图）
 - GitHub：源码版本管理
@@ -99,10 +99,10 @@ Storefront 和 Ops 是两个独立前端。
 构建时设置：
 
 ```text
-VITE_API_BASE_URL=https://api.xyong.ccwu.cc
+VITE_API_BASE_URL=https://apixyong.ccwu.cc
 ```
 
-先把 Worker 部署到 Cloudflare，确认 `/api/health` 正常，再绑定 `api.xyong.ccwu.cc`。
+先把 Worker 部署到 Cloudflare，确认 `/api/health` 正常，再绑定 `apixyong.ccwu.cc`。
 
 ## 免费 / 低成本策略
 
