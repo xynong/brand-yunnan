@@ -130,14 +130,14 @@ function optionalText(value: unknown): string | undefined {
 function imageSrc(value?: string): string | undefined {
   if (!value) return undefined;
 
-  // Keep absolute image/CDN URLs absolute. encodeURI preserves URL syntax
-  // while encoding Chinese and other non-ASCII characters in the path.
-  const encoded = encodeURI(value);
-  if (/^(https?:)?\/\//i.test(value) || /^(data|blob):/i.test(value)) {
-    return encoded;
+  // Absolute URLs must remain untouched; only root-relative paths use the API host.
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^(data|blob):/i.test(value) || value.startsWith('//')) return value;
+  if (value.startsWith('/')) {
+    return new URL(encodeURI(value), `${API.replace(/\/$/, '')}/`).toString();
   }
 
-  return new URL(encoded, `${API.replace(/\/$/, '')}/`).toString();
+  return value;
 }
 
 function normalizeProduct(row: ProductRow): Product {
