@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 
-const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+const API = import.meta.env.VITE_API_BASE_URL || 'https://apixyong.ccwu.cc';
 const LANGUAGE_KEY = 'xyong-storefront-language';
 
 type Language = 'zh' | 'en';
