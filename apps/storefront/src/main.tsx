@@ -68,7 +68,7 @@ const messages = {
     checkoutNotice: 'Checkout is not enabled yet. Please contact us to place an order.',
     language: '中文',
     currency: 'USD',
-    brandTagline: 'Yunnan Origin',
+    brandTagline: 'Yunnan Boutique Garden',
   },
   zh: {
     navShop: '商品',
@@ -101,10 +101,10 @@ const messages = {
     itemTypes: '种商品',
     total: '合计',
     checkout: '前往安全结账',
-    checkoutNotice: '在线结账暂未开放。如需购买，请联系我们。',
+    checkoutNotice: '在线结账暂未开放。���需购买，请联系我们。',
     language: 'EN',
     currency: '美元',
-    brandTagline: '云南原产地',
+    brandTagline: '云南精品园',
   },
 } as const;
 
@@ -219,8 +219,8 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     document.title = lang === 'zh'
-      ? 'XYONG 云南原产地精选 | 跨境商城'
-      : 'XYONG Yunnan Origin | International Store';
+      ? 'XYONG BRAND 云南精品园 | 跨境商城'
+      : 'XYONG BRAND | Yunnan Boutique Garden';
     try {
       window.localStorage.setItem(LANGUAGE_KEY, lang);
     } catch {
@@ -321,7 +321,7 @@ function App() {
   return (
     <div className="site">
       <header>
-        <div className="brand">XYONG <span>{t.brandTagline}</span></div>
+        <div className="brand">XYONG BRAND <span>{t.brandTagline}</span></div>
         <nav>
           <a href="#shop">{t.navShop}</a>
           <a href="#origin">{t.navOrigin}</a>
@@ -460,7 +460,7 @@ function App() {
         </button>
       </aside>
 
-      <footer>© 2026 XYONG · {t.brandTagline} · {lang === 'zh' ? '跨境商城' : 'International Store'}</footer>
+      <footer>© 2026 XYONG BRAND · {t.brandTagline} · {lang === 'zh' ? '跨境商城' : 'International Store'}</footer>
     </div>
   );
 }
