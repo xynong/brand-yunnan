@@ -1,0 +1,5 @@
+sku,brand_id,category,name_zh,name_en,description_zh,description_en,price_usd,spec,image_key,hs_code
+YOUR-SKU,brand-xyong-coffee,coffee,请填写产品中文名,Product English Name,请填写中文描述,English description,0,规格,products/YOUR-SKU/main.jpg,
+YOUR-SKU,brand-xyong-tea,ancient_tree_tea,请填写产品中文名,Product English Name,请填写中文描述,English description,0,规格,products/YOUR-SKU/main.jpg,
+YOUR-SKU,brand-xyong-truffle,black_truffle,请填写产品中文名,Product English Name,请填写中文描述,English description,0,规格,products/YOUR-SKU/main.jpg,
+YOUR-SKU,brand-xyong-oil,botanical_essential_oil,请填写产品中文名,Product English Name,请填写中文描述,English description,0,规格,products/YOUR-SKU/main.jpg,

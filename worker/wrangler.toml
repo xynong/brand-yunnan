@@ -1,0 +1,32 @@
+name = "xyong-commerce-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-22"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "xyong-db"
+database_id = "f37c0ebe-4e04-46e1-a357-33719228fd11"
+
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "xyong-media"
+
+# 免费企业邮箱：接收 xyong@xyong.ccwu.cc 的来信转发到 Gmail（Email Routing 规则已配）。
+# 发信走 Cloudflare send_email 绑定，发件人 orders@xyong.ccwu.cc，完全免费。
+[[send_email]]
+name = "NOTIFY_MAIL"
+allowed_sender_addresses = ["orders@xyong.ccwu.cc", "xyong@xyong.ccwu.cc"]
+
+[vars]
+STORE_ORIGIN = "https://xyong.ccwu.cc"
+OPS_ORIGIN = "https://ops.xyong.ccwu.cc"
+MAIL_FROM = "orders@xyong.ccwu.cc"
+MAIL_TO = "xynong@gmail.com"
+MAIL_BOX = "xyong@xyong.ccwu.cc"
+
+[triggers]
+# Cloudflare Cron uses UTC. 02:00 UTC = 09:00 Bangkok time.
+crons = ["0 2 * * *"]
+
+[observability]
+enabled = true
